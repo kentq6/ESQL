@@ -1,6 +1,6 @@
 import subprocess
-from helpers.mf_struct import parse_MF_Struct
-
+from helpers.algorithm import produce_algorithm
+from helpers.classH import def_H_table
 
 def main():
     """
@@ -12,31 +12,20 @@ def main():
     fname = "input/input.txt"
 
     # Get arguments for Phi operator
-    parse_MF_Struct(fname)
+    algorithm = produce_algorithm(fname)
 
-    
-    # code_for_H_table = """
-    # class H: 
-    #     {groupingAttributes[0]}
-    #     ...
-    #     {FVector[0]}
-    # """
-    
-
-    body = """
-    for row in cur:
-        if row['quant'] > 10:
-            _global.append(row)
+    body = f"""
+    {algorithm}
     """
 
-    # Note: The f allows formatting with variables.
-    #       Also, note the indentation is preserved.
+    # Note: The f allows formatting with variables. Indentation is preserved.
     tmp = f"""
 import os
 import psycopg2
 import psycopg2.extras
 import tabulate
 from dotenv import load_dotenv
+from helpers.mf_struct import parse_MF_struct
 
 def query():
     load_dotenv()
@@ -48,7 +37,11 @@ def query():
     conn = psycopg2.connect("dbname="+dbname+" user="+user+" password="+password,
                             cursor_factory=psycopg2.extras.DictCursor)
     cur = conn.cursor()
-    cur.execute("SELECT * FROM sales")
+    select_stmt = "SELECT * FROM sales"
+    cur.execute(select_stmt)
+    all_sales = cur.fetchall()
+
+    {def_H_table}
     
     _global = []
     {body}
@@ -64,9 +57,9 @@ if "__main__" == __name__:
     """
 
     # Write the generated code to a file
-    open("_generated.py", "w").write(tmp)
+    open("output/output.py", "w").write(tmp)
     # Execute the generated code
-    subprocess.run(["python3", "_generated.py"])
+    subprocess.run(["python3", "output/output.py"])
 
 
 if "__main__" == __name__:
