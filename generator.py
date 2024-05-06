@@ -1,5 +1,5 @@
 import subprocess
-from helpers import parse_MF_Struct
+from mf_struct import parse_MF_Struct
 
 
 def main():
