@@ -1,11 +1,27 @@
+
 def list_of_strings(args):
+    """ Returns list of strings separated by comma """
     return list(map(str.strip, args.split(',')))
 
 def extract_set(args):
+    """ Returns set of strings from an argument enclosed in brackets {} """
     args = args.replace('{', '').replace('}', '')
     return set(args.split(','))
 
-def parse_MF_Struct(input_file = None):
+def parse_MF_Struct(input_file):
+    """ 
+    Produces MF struct detailing the 6 arguments needed for phi operator
+
+    Parameters
+    ----------
+    input_file : str, optional
+        Path to input file. If not provided, function will request user input.
+    
+    Returns
+    -------
+    dict representing an MF struct
+    """
+
     struct = dict()
 
     if input_file == None:
