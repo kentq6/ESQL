@@ -41,13 +41,21 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
+    input_file = "input/input.txt"
+
     {def_H_table}
     
     _global = []
     {body}
+
+    for entry_id, info in h_table.table.items():
+        entry = [entry_id] + [*info.values()]
+        _global.append(entry)
+
+    headers = mf_structure['select'].split(',')
     
     return tabulate.tabulate(_global,
-                        headers="keys", tablefmt="psql")
+                        headers=headers, tablefmt="psql")
 
 def main():
     print(query())
@@ -57,9 +65,9 @@ if "__main__" == __name__:
     """
 
     # Write the generated code to a file
-    open("output/output.py", "w").write(tmp)
+    open("output.py", "w").write(tmp)
     # Execute the generated code
-    subprocess.run(["python3", "output/output.py"])
+    subprocess.run(["python3", "output.py"])
 
 
 if "__main__" == __name__:
