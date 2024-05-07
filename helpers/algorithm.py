@@ -60,17 +60,12 @@ def parse_predicates(sigma: list, default_ga: list):
     return gv, grouping_attributes, conditions
 
 def find_gv_aggregates(gv: str, fVector: list):
-    """ Returns aggregate functions relevant to the given grouping variable """
+    """ Traverses fVector to find aggregate functions relevant to the given grouping variable """
     aggregate_funcs = []
     for f in fVector:
         if f[:len(gv)] == gv:
             aggregate_funcs.append(f)
     if any('avg' in func for func in aggregate_funcs):
-        # If any of the aggregate_functions are avg
-        # sum_func = gv + '_aux_sum_quant'
-        # count_func = gv + '_aux_count_quant'
-        # aggregate_funcs.append(sum_func)
-        # aggregate_funcs.append(count_func)
         if not any('sum' in func for func in aggregate_funcs):
             # Add aggregate func to track sum
             sum_func = gv + '_sum_quant'
@@ -79,7 +74,7 @@ def find_gv_aggregates(gv: str, fVector: list):
             # Add aggregate func to track count
             count_func = gv + '_count_quant'
             aggregate_funcs.append(count_func)
-    return aggregate_funcs
+    return gv, aggregate_funcs
 
 def produce_algorithm(input_file = None):
 
@@ -98,11 +93,16 @@ def produce_algorithm(input_file = None):
 
     grouping_variables = get_gvs(mf_structure['predicates'])
 
+    aggregate_dict = dict()
+    for j in range(len(mf_structure['predicates'])):
+        current_gv = grouping_variables[j]
+        gv, aggs = find_gv_aggregates(current_gv, mf_structure['fVector'])
+        aggregate_dict[current_gv] = aggs
+
     for j in range(len(mf_structure['predicates'])):
         # Each iteration of j aggregates one group (identified by gv)
 
-        current_gv = grouping_variables[j]
-        aggregate_funcs = find_gv_aggregates(current_gv, mf_structure['fVector'])
+        aggregate_funcs = aggregate_dict[grouping_variables[j]]
 
         # Get grouping attributes from predicate vector
         gv, grouping_attributes, conditions = parse_predicates(mf_structure['predicates'][j], mf_structure['groupAttributes'])
@@ -116,6 +116,7 @@ def produce_algorithm(input_file = None):
             def_cond += str_conditions
 
         output += f"""
+            aggregate_dict = {aggregate_dict}
             if i == {j}:
                 aggregate_funcs = {aggregate_funcs}
                 {def_cond}:
@@ -129,10 +130,7 @@ def produce_algorithm(input_file = None):
                         h_table.update(({ga}),avg_aggr,quant,{gv})
                         
                 else:
-                    cols = mf_structure['fVector'].copy()
-                    for func in aggregate_funcs:
-                        if func not in cols:
-                            cols.append(func)
+                    cols = sum([lst for lst in aggregate_dict.values()], [])
                     h_table.insert(({ga}), cols)
         """
     return output

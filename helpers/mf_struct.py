@@ -78,6 +78,54 @@ def parse_MF_struct(input_file = None):
                 
     return mf_structure
 
-if "__main__" == __name__:
-    parse_MF_struct("../input/input.txt")
+def parse_having(having_str: str):
+    """ 
+    Produces list of parsed conditions in HAVING clause
+
+    Parameters
+    ----------
+    having_str : str
+        Direct input of HAVING clause
+    
+    Returns
+    -------
+    res : list[list(str)]
+        Each nested list represents one condition within HAVING, with the format [param1, param2, operator]
+    """
+    res = []
+    having_conditions = having_str.split(" and ")
+    for cond in having_conditions:
+        if ">" in cond:
+            params = list(map(str.strip, cond.split(">")))
+            params.extend([">"])
+            res.append(params)
+        elif "<" in cond:
+            params = list(map(str.strip, cond.split("<")))
+            params.extend(["<"])
+            res.append(params)
+        elif "=" in cond:
+            params = list(map(str.strip, cond.split("=")))
+            params.extend(["=="])
+            res.append(params)
+        elif "!=" in cond:
+            params = list(map(str.strip, cond.split("!=")))
+            params.extend(["!="])
+            res.append(params)
+    return res
+
+def apply_having(having_str: str, info: dict):
+    bools = []
+    having_conditions = parse_having(having_str)
+    for params in having_conditions:
+        if  (params[2] == ">" and info[params[0]] > info[params[1]]) or \
+            (params[2] == "<" and info[params[0]] < info[params[1]]) or \
+            (params[2] == "==" and info[params[0]] == info[params[1]]) or \
+            (params[2] == "!=" and info[params[0]] != info[params[1]]):
+            bools.append(True)
+        else:
+            bools.append(False)
+    return all(bools)
+
+# if "__main__" == __name__:
+#     parse_MF_struct("../input/input.txt")
     

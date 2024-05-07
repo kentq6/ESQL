@@ -5,7 +5,7 @@ import psycopg2.extras
 import tabulate
 import time
 from dotenv import load_dotenv
-from helpers.mf_struct import parse_MF_struct
+from helpers.mf_struct import parse_having, apply_having
 
 def query():
     load_dotenv()
@@ -21,7 +21,7 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
-    # input_file = "input/input5.txt"
+    # input_file = "input/input4.txt"
 
     
     class H:
@@ -65,7 +65,7 @@ def query():
     
     _global = []
     
-    mf_structure = {'select': 'cust, 1_sum_quant, 2_sum_quant, 3_sum_quant', 'numGV': 3, 'groupAttributes': ['cust'], 'fVector': ['1_sum_quant', '2_sum_quant', '3_sum_quant'], 'predicates': [["1.state='NY'"], ["2.state='NJ'"], ["3.state='CT'"]], 'having': '-'}
+    mf_structure = {'select': 'cust, prod, 1_sum_quant, 1_count_quant, 1_avg_quant, 2_avg_quant', 'numGV': 2, 'groupAttributes': ['cust', 'prod'], 'fVector': ['1_sum_quant', '1_count_quant', '1_avg_quant', '2_avg_quant'], 'predicates': [["1.state='NJ'"], ["2.state='NY'"]], 'having': '2_avg_quant > 1_avg_quant'}
 
     # Create instance of H_Table
     h_table = H(len(mf_structure['groupAttributes']), len(mf_structure['fVector']))
@@ -73,67 +73,45 @@ def query():
     for entry, (cust, prod, day, month, year, state, quant, date) in enumerate(all_sales, 1):
         for i in range(mf_structure['numGV']):
     
+            aggregate_dict = {'1': ['1_sum_quant', '1_count_quant', '1_avg_quant'], '2': ['2_avg_quant', '2_sum_quant', '2_count_quant']}
             if i == 0:
-                aggregate_funcs = ['1_sum_quant']
-                if (cust) in h_table.table and state=='NY':
+                aggregate_funcs = ['1_sum_quant', '1_count_quant', '1_avg_quant']
+                if (cust,prod) in h_table.table and state=='NJ':
                     avg_aggr = None
                     for func in aggregate_funcs:
                         if 'avg' in func:
                             avg_aggr = func
                         else:
-                            h_table.update((cust),func,quant,1)
+                            h_table.update((cust,prod),func,quant,1)
                     if avg_aggr != None:
-                        h_table.update((cust),avg_aggr,quant,1)
+                        h_table.update((cust,prod),avg_aggr,quant,1)
                         
                 else:
-                    cols = mf_structure['fVector'].copy()
-                    for func in aggregate_funcs:
-                        if func not in cols:
-                            cols.append(func)
-                    h_table.insert((cust), cols)
+                    cols = sum([lst for lst in aggregate_dict.values()], [])
+                    h_table.insert((cust,prod), cols)
         
+            aggregate_dict = {'1': ['1_sum_quant', '1_count_quant', '1_avg_quant'], '2': ['2_avg_quant', '2_sum_quant', '2_count_quant']}
             if i == 1:
-                aggregate_funcs = ['2_sum_quant']
-                if (cust) in h_table.table and state=='NJ':
+                aggregate_funcs = ['2_avg_quant', '2_sum_quant', '2_count_quant']
+                if (cust,prod) in h_table.table and state=='NY':
                     avg_aggr = None
                     for func in aggregate_funcs:
                         if 'avg' in func:
                             avg_aggr = func
                         else:
-                            h_table.update((cust),func,quant,2)
+                            h_table.update((cust,prod),func,quant,2)
                     if avg_aggr != None:
-                        h_table.update((cust),avg_aggr,quant,2)
+                        h_table.update((cust,prod),avg_aggr,quant,2)
                         
                 else:
-                    cols = mf_structure['fVector'].copy()
-                    for func in aggregate_funcs:
-                        if func not in cols:
-                            cols.append(func)
-                    h_table.insert((cust), cols)
-        
-            if i == 2:
-                aggregate_funcs = ['3_sum_quant']
-                if (cust) in h_table.table and state=='CT':
-                    avg_aggr = None
-                    for func in aggregate_funcs:
-                        if 'avg' in func:
-                            avg_aggr = func
-                        else:
-                            h_table.update((cust),func,quant,3)
-                    if avg_aggr != None:
-                        h_table.update((cust),avg_aggr,quant,3)
-                        
-                else:
-                    cols = mf_structure['fVector'].copy()
-                    for func in aggregate_funcs:
-                        if func not in cols:
-                            cols.append(func)
-                    h_table.insert((cust), cols)
+                    cols = sum([lst for lst in aggregate_dict.values()], [])
+                    h_table.insert((cust,prod), cols)
         
 
     headers = mf_structure['select'].split(',')
 
     def cleanup(info: dict, fVector = mf_structure['fVector']):
+        # Remove values from auxiliary aggregate functions (SUM and COUNT when computing AVG)
         vs = []
         for k,v in info.items():
             if k in fVector:
@@ -141,12 +119,19 @@ def query():
         return vs
 
     for entry_id, info in h_table.table.items():
+    # Flatten nested dictionary in h_table for tabulate to format
         entry = []
+
+        if mf_structure['having'] != "-" and not apply_having(mf_structure['having'], info):
+            continue
+        
+        # Include grouping attributes in entry
         if type(entry_id) is tuple:
             for t in entry_id:
                 entry += [t] 
         else:
             entry += [entry_id]
+        # Only include defined aggregate attributes
         entry += cleanup(info)
         
         _global.append(entry)
@@ -157,7 +142,7 @@ def query():
 def main():
     start_time = time.time()
     print(query())
-    print("---- Execution: %s seconds ----" % (time.time() - start_time))
+    print("---- %s seconds ----" % (time.time() - start_time))
     
 if "__main__" == __name__:
     main()

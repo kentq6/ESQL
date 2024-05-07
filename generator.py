@@ -27,7 +27,7 @@ import psycopg2.extras
 import tabulate
 import time
 from dotenv import load_dotenv
-from helpers.mf_struct import parse_MF_struct
+from helpers.mf_struct import parse_having, apply_having
 
 def query():
     load_dotenv()
@@ -63,6 +63,10 @@ def query():
     for entry_id, info in h_table.table.items():
     # Flatten nested dictionary in h_table for tabulate to format
         entry = []
+
+        if mf_structure['having'] != "-" and not apply_having(mf_structure['having'], info):
+            continue
+        
         # Include grouping attributes in entry
         if type(entry_id) is tuple:
             for t in entry_id:
