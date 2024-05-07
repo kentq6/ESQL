@@ -1,0 +1,6 @@
+SELECTION ATTRIBUTES: cust, prod, sum_1_quant, count_1_quant, avg_1_quant
+NUMBER OF GROUPING VARIABLES: 1
+GROUPING ATTRIBUTES: cust, prod
+AGGREGATE FUNCTIONS: sum_1_quant, count_1_quant, avg_1_quant
+PREDICATES FOR GVs: {1.state=’NJ’}
+HAVING:
