@@ -2,6 +2,7 @@ import re
 from helpers.mf_struct import parse_MF_struct
 
 def get_gvs(sigma_vector):
+    """ Returns list of grouping variables in query """
     gvs = []
     for pset in sigma_vector:
         v = pset[0].split('.')
@@ -31,16 +32,34 @@ def parse_predicates(sigma: list, default_ga: list):
     return gv, grouping_attributes, conditions
 
 def find_gv_aggregates(gv: str, fVector: list):
+    """ Returns aggregate functions relevant to the given grouping variable """
     aggregate_funcs = []
     for f in fVector:
         if f[:len(gv)] == gv:
             aggregate_funcs.append(f)
+    if any('avg' in func for func in aggregate_funcs):
+        # If any of the aggregate_functions are avg
+        # sum_func = gv + '_aux_sum_quant'
+        # count_func = gv + '_aux_count_quant'
+        # aggregate_funcs.append(sum_func)
+        # aggregate_funcs.append(count_func)
+        if not any('sum' in func for func in aggregate_funcs):
+            # Add aggregate func to track sum
+            sum_func = gv + '_sum_quant'
+            aggregate_funcs.append(sum_func)
+        if not any('count' in func for func in aggregate_funcs):
+            # Add aggregate func to track count
+            count_func = gv + '_count_quant'
+            aggregate_funcs.append(count_func)
     return aggregate_funcs
 
 def produce_algorithm(input_file = None):
 
-    output = f"""
+    # Produce mf-structure
     mf_structure = parse_MF_struct(input_file)
+
+    output = f"""
+    mf_structure = {mf_structure}
 
     # Create instance of H_Table
     h_table = H(len(mf_structure['groupAttributes']), len(mf_structure['fVector']))
@@ -49,15 +68,12 @@ def produce_algorithm(input_file = None):
         for i in range(mf_structure['numGV']):
     """
 
-    # Produce mf-structure
-    mf_structure = parse_MF_struct(input_file)
     grouping_variables = get_gvs(mf_structure['predicates'])
 
     for j in range(len(mf_structure['predicates'])):
         # Each iteration of j aggregates one group (identified by gv)
 
         current_gv = grouping_variables[j]
-        print(current_gv)
         aggregate_funcs = find_gv_aggregates(current_gv, mf_structure['fVector'])
 
         # Get grouping attributes from predicate vector
@@ -75,12 +91,21 @@ def produce_algorithm(input_file = None):
             if i == {j}:
                 aggregate_funcs = {aggregate_funcs}
                 {def_cond}:
+                    avg_aggr = None
                     for func in aggregate_funcs:
-                        h_table.update(({ga}),func,quant)
+                        if 'avg' in func:
+                            avg_aggr = func
+                        else:
+                            h_table.update(({ga}),func,quant,{gv})
+                    if avg_aggr != None:
+                        h_table.update(({ga}),avg_aggr,quant,{gv})
+                        
                 else:
-                    h_table.insert(({ga}), mf_structure['fVector'])
+                    cols = mf_structure['fVector'].copy()
+                    for func in aggregate_funcs:
+                        if func not in cols:
+                            cols.append(func)
+                    h_table.insert(({ga}), cols)
         """
-
-
     return output
 

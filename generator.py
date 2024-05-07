@@ -9,8 +9,13 @@ def main():
     file (e.g. _generated.py) and then run.
     """
 
-    fname = "input/input2.txt"
+    query_num = input("Query number: ")
 
+    if query_num:
+        fname = "input/input{}.txt".format(query_num)
+    else:
+        fname = None
+        
     # Get arguments for Phi operator
     algorithm = produce_algorithm(fname)
 
@@ -44,17 +49,25 @@ def query():
     _global = []
     {algorithm}
 
+    headers = mf_structure['select'].split(',')
+
+    def cleanup(info: dict, fVector = mf_structure['fVector']):
+        vs = []
+        for k,v in info.items():
+            if k in fVector:
+                vs.append(v)
+        return vs
+
     for entry_id, info in h_table.table.items():
         entry = []
         if type(entry_id) is tuple:
             for t in entry_id:
-                entry += [t]
+                entry += [t] 
         else:
             entry += [entry_id]
-        entry += [*info.values()]
+        entry += cleanup(info)
+        
         _global.append(entry)
-
-    headers = mf_structure['select'].split(',')
     
     return tabulate.tabulate(_global,
                         headers=headers, tablefmt="psql")

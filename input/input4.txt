@@ -3,4 +3,4 @@ NUMBER OF GROUPING VARIABLES: 2
 GROUPING ATTRIBUTES: cust, prod
 AGGREGATE FUNCTIONS: 1_sum_quant, 1_count_quant, 1_avg_quant, 2_avg_quant
 PREDICATES FOR GVs: {1.state='NJ'} {2.state='NY'}
-HAVING: avg_2_quant > avg_1_quant
+HAVING: 2_avg_quant > 1_avg_quant

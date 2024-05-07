@@ -20,7 +20,7 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
-    input_file = "input/input2.txt"
+    input_file = "input/input4.txt"
 
     
     class H:
@@ -34,29 +34,37 @@ def query():
             if key not in self.table:
                 self.table[key] = dict()
                 for f in fVector:
-                    self.table[key][f] = 0
+                    self.table[key][f] = -1 if ('min' in f) else 0
         
-        def update(self, grouping_attributes, aggregate, val):
+        def update(self, grouping_attributes, aggregate, val, gv):
             key = grouping_attributes
             if 'sum' in aggregate:
                 self.table[key][aggregate] += val
             elif 'min' in aggregate:
                 current_min = self.table[key][aggregate]
-                self.table[key][aggregate] = current_min if current_min<val else val
+                self.table[key][aggregate] = current_min if (current_min < val and current_min != -1) else val
             elif 'max' in aggregate:
                 current_max = self.table[key][aggregate]
-                self.table[key][aggregate] = current_max if current_max>val else val
+                self.table[key][aggregate] = current_max if (current_max > val) else val
             elif 'count' in aggregate:
                 self.table[key][aggregate] += 1
-    
-        def get(self, grouping_attributes):
+            elif 'avg' in aggregate:
+                self.update_avg(grouping_attributes, aggregate, val, gv)
+        
+        def update_avg(self, grouping_attributes, aggregate, val, gv):
             key = grouping_attributes
-            return self.table.get(key, None)
+            sum_aggr = str(gv) + '_sum_quant'
+            count_aggr = str(gv) + '_count_quant'
+            self.table[key][aggregate] = self.get(key, sum_aggr) / self.get(key, count_aggr)
+    
+        def get(self, grouping_attributes, aggregate):
+            key = grouping_attributes
+            return self.table[key][aggregate]
     
     
     _global = []
     
-    mf_structure = parse_MF_struct(input_file)
+    mf_structure = {'select': 'cust, prod, 1_sum_quant, 1_count_quant, 1_avg_quant, 2_avg_quant', 'numGV': 2, 'groupAttributes': ['cust', 'prod'], 'fVector': ['1_sum_quant', '1_count_quant', '1_avg_quant', '2_avg_quant'], 'predicates': [["1.state='NJ'"], ["2.state='NY'"]], 'having': '2_avg_quant > 1_avg_quant'}
 
     # Create instance of H_Table
     h_table = H(len(mf_structure['groupAttributes']), len(mf_structure['fVector']))
@@ -65,33 +73,63 @@ def query():
         for i in range(mf_structure['numGV']):
     
             if i == 0:
-                aggregate_funcs = ['1_sum_quant', '1_count_quant', '1_min_quant', '1_max_quant']
+                aggregate_funcs = ['1_sum_quant', '1_count_quant', '1_avg_quant']
                 if (cust,prod) in h_table.table and state=='NJ':
+                    avg_aggr = None
                     for func in aggregate_funcs:
-                        h_table.update((cust,prod),func,quant)
+                        if 'avg' in func:
+                            avg_aggr = func
+                        else:
+                            h_table.update((cust,prod),func,quant,1)
+                    if avg_aggr != None:
+                        h_table.update((cust,prod),avg_aggr,quant,1)
+                        
                 else:
-                    h_table.insert((cust,prod), mf_structure['fVector'])
+                    cols = mf_structure['fVector'].copy()
+                    for func in aggregate_funcs:
+                        if func not in cols:
+                            cols.append(func)
+                    h_table.insert((cust,prod), cols)
         
             if i == 1:
-                aggregate_funcs = ['2_sum_quant']
+                aggregate_funcs = ['2_avg_quant', '2_sum_quant', '2_count_quant']
                 if (cust,prod) in h_table.table and state=='NY':
+                    avg_aggr = None
                     for func in aggregate_funcs:
-                        h_table.update((cust,prod),func,quant)
+                        if 'avg' in func:
+                            avg_aggr = func
+                        else:
+                            h_table.update((cust,prod),func,quant,2)
+                    if avg_aggr != None:
+                        h_table.update((cust,prod),avg_aggr,quant,2)
+                        
                 else:
-                    h_table.insert((cust,prod), mf_structure['fVector'])
+                    cols = mf_structure['fVector'].copy()
+                    for func in aggregate_funcs:
+                        if func not in cols:
+                            cols.append(func)
+                    h_table.insert((cust,prod), cols)
         
+
+    headers = mf_structure['select'].split(',')
+
+    def cleanup(info: dict, fVector = mf_structure['fVector']):
+        vs = []
+        for k,v in info.items():
+            if k in fVector:
+                vs.append(v)
+        return vs
 
     for entry_id, info in h_table.table.items():
         entry = []
         if type(entry_id) is tuple:
             for t in entry_id:
-                entry += [t]
+                entry += [t] 
         else:
             entry += [entry_id]
-        entry += [*info.values()]
+        entry += cleanup(info)
+        
         _global.append(entry)
-
-    headers = mf_structure['select'].split(',')
     
     return tabulate.tabulate(_global,
                         headers=headers, tablefmt="psql")

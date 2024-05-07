@@ -14,7 +14,7 @@ def extract_sets(args: str):
     # print(str(predicates))
     return predicates
 
-def parse_MF_struct(input_file: str):
+def parse_MF_struct(input_file = None):
     """ 
     Produces MF struct detailing the 6 arguments needed for phi operator
 
