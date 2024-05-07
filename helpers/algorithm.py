@@ -63,7 +63,7 @@ def produce_algorithm(input_file = None):
         gv, grouping_attributes, conditions = parse_predicates(mf_structure['predicates'][j], mf_structure['groupAttributes'])
         ga = ','.join(grouping_attributes)
 
-        def_cond = f"""if ({ga}) in h_table"""
+        def_cond = f"""if ({ga}) in h_table.table"""
         if bool(conditions):
             # Additional conditions exist
             def_cond += " and "
@@ -77,7 +77,7 @@ def produce_algorithm(input_file = None):
                     for func in aggregate_funcs:
                         h_table.update({ga},func,quant)
                 else:
-                    h_table.insert({ga})
+                    h_table.insert(({ga}), mf_structure['fVector'])
         """
 
 

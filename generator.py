@@ -47,9 +47,15 @@ def query():
     
     _global = []
     {body}
+
+    for entry_id, info in h_table.table.items():
+        entry = [entry_id] + [*info.values()]
+        _global.append(entry)
+
+    headers = mf_structure['select'].split(',')
     
     return tabulate.tabulate(_global,
-                        headers="keys", tablefmt="psql")
+                        headers=headers, tablefmt="psql")
 
 def main():
     print(query())
