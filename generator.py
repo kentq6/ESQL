@@ -25,6 +25,7 @@ import os
 import psycopg2
 import psycopg2.extras
 import tabulate
+import time
 from dotenv import load_dotenv
 from helpers.mf_struct import parse_MF_struct
 
@@ -42,7 +43,7 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
-    input_file = "{fname}"
+    # input_file = "{fname}"
 
     {def_H_table}
     
@@ -52,6 +53,7 @@ def query():
     headers = mf_structure['select'].split(',')
 
     def cleanup(info: dict, fVector = mf_structure['fVector']):
+        # Remove values from auxiliary aggregate functions (SUM and COUNT when computing AVG)
         vs = []
         for k,v in info.items():
             if k in fVector:
@@ -59,12 +61,15 @@ def query():
         return vs
 
     for entry_id, info in h_table.table.items():
+    # Flatten nested dictionary in h_table for tabulate to format
         entry = []
+        # Include grouping attributes in entry
         if type(entry_id) is tuple:
             for t in entry_id:
                 entry += [t] 
         else:
             entry += [entry_id]
+        # Only include defined aggregate attributes
         entry += cleanup(info)
         
         _global.append(entry)
@@ -73,7 +78,9 @@ def query():
                         headers=headers, tablefmt="psql")
 
 def main():
+    start_time = time.time()
     print(query())
+    print("---- %s seconds ----" % (time.time() - start_time))
     
 if "__main__" == __name__:
     main()

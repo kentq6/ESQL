@@ -3,6 +3,7 @@ import os
 import psycopg2
 import psycopg2.extras
 import tabulate
+import time
 from dotenv import load_dotenv
 from helpers.mf_struct import parse_MF_struct
 
@@ -20,7 +21,7 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
-    input_file = "input/input4.txt"
+    # input_file = "input/input5.txt"
 
     
     class H:
@@ -64,7 +65,7 @@ def query():
     
     _global = []
     
-    mf_structure = {'select': 'cust, prod, 1_sum_quant, 1_count_quant, 1_avg_quant, 2_avg_quant', 'numGV': 2, 'groupAttributes': ['cust', 'prod'], 'fVector': ['1_sum_quant', '1_count_quant', '1_avg_quant', '2_avg_quant'], 'predicates': [["1.state='NJ'"], ["2.state='NY'"]], 'having': '2_avg_quant > 1_avg_quant'}
+    mf_structure = {'select': 'cust, 1_sum_quant, 2_sum_quant, 3_sum_quant', 'numGV': 3, 'groupAttributes': ['cust'], 'fVector': ['1_sum_quant', '2_sum_quant', '3_sum_quant'], 'predicates': [["1.state='NY'"], ["2.state='NJ'"], ["3.state='CT'"]], 'having': '-'}
 
     # Create instance of H_Table
     h_table = H(len(mf_structure['groupAttributes']), len(mf_structure['fVector']))
@@ -73,42 +74,61 @@ def query():
         for i in range(mf_structure['numGV']):
     
             if i == 0:
-                aggregate_funcs = ['1_sum_quant', '1_count_quant', '1_avg_quant']
-                if (cust,prod) in h_table.table and state=='NJ':
+                aggregate_funcs = ['1_sum_quant']
+                if (cust) in h_table.table and state=='NY':
                     avg_aggr = None
                     for func in aggregate_funcs:
                         if 'avg' in func:
                             avg_aggr = func
                         else:
-                            h_table.update((cust,prod),func,quant,1)
+                            h_table.update((cust),func,quant,1)
                     if avg_aggr != None:
-                        h_table.update((cust,prod),avg_aggr,quant,1)
+                        h_table.update((cust),avg_aggr,quant,1)
                         
                 else:
                     cols = mf_structure['fVector'].copy()
                     for func in aggregate_funcs:
                         if func not in cols:
                             cols.append(func)
-                    h_table.insert((cust,prod), cols)
+                    h_table.insert((cust), cols)
         
             if i == 1:
-                aggregate_funcs = ['2_avg_quant', '2_sum_quant', '2_count_quant']
-                if (cust,prod) in h_table.table and state=='NY':
+                aggregate_funcs = ['2_sum_quant']
+                if (cust) in h_table.table and state=='NJ':
                     avg_aggr = None
                     for func in aggregate_funcs:
                         if 'avg' in func:
                             avg_aggr = func
                         else:
-                            h_table.update((cust,prod),func,quant,2)
+                            h_table.update((cust),func,quant,2)
                     if avg_aggr != None:
-                        h_table.update((cust,prod),avg_aggr,quant,2)
+                        h_table.update((cust),avg_aggr,quant,2)
                         
                 else:
                     cols = mf_structure['fVector'].copy()
                     for func in aggregate_funcs:
                         if func not in cols:
                             cols.append(func)
-                    h_table.insert((cust,prod), cols)
+                    h_table.insert((cust), cols)
+        
+            if i == 2:
+                aggregate_funcs = ['3_sum_quant']
+                if (cust) in h_table.table and state=='CT':
+                    avg_aggr = None
+                    for func in aggregate_funcs:
+                        if 'avg' in func:
+                            avg_aggr = func
+                        else:
+                            h_table.update((cust),func,quant,3)
+                    if avg_aggr != None:
+                        h_table.update((cust),avg_aggr,quant,3)
+                        
+                else:
+                    cols = mf_structure['fVector'].copy()
+                    for func in aggregate_funcs:
+                        if func not in cols:
+                            cols.append(func)
+                    h_table.insert((cust), cols)
         
 
     headers = mf_structure['select'].split(',')
@@ -135,7 +155,9 @@ def query():
                         headers=headers, tablefmt="psql")
 
 def main():
+    start_time = time.time()
     print(query())
+    print("---- Execution: %s seconds ----" % (time.time() - start_time))
     
 if "__main__" == __name__:
     main()

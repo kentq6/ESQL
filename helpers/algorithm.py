@@ -2,7 +2,19 @@ import re
 from helpers.mf_struct import parse_MF_struct
 
 def get_gvs(sigma_vector):
-    """ Returns list of grouping variables in query """
+    """ 
+    Returns list of n grouping variables
+    
+    Parameters
+    ----------
+    sigma_vector : list(list(str))
+        Nested lists represent all predicates belonging to the corresponding grouping variable
+    
+    Returns
+    -------
+    gvs : list
+        List of all n grouping variables
+    """
     gvs = []
     for pset in sigma_vector:
         v = pset[0].split('.')
@@ -10,9 +22,25 @@ def get_gvs(sigma_vector):
     return gvs
 
 def parse_predicates(sigma: list, default_ga: list):
-
+    """ 
+    Parses the grouping variable, grouping attributes, and predicates to extract defining conditions
+    
+    Parameters
+    ----------
+    sigma : list(str)
+        Represents all predicates belonging to the corresponding grouping variable
+    
+    Returns
+    -------
+    gv : str
+        Corresponding grouping variable of the set of predicates
+    grouping_attributes : list(str)
+        List of grouping attributes to construct the tuple for scanning
+    conditions : list(str)
+        List of predicates to define range for group
+    """
     # Set of grouping attributes
-    grouping_attributes = {}
+    grouping_attributes = []
     # List of conditions
     conditions = []
 
@@ -21,7 +49,7 @@ def parse_predicates(sigma: list, default_ga: list):
         gv = params[0]
         # print(str(params))
         if params[1] == params[2]:
-            grouping_attributes.add(params[1])
+            grouping_attributes.append(params[1])
         else:
             this_cond = predicate[len(gv)+1:].replace("=", "==")
             conditions.append(this_cond)
