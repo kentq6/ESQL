@@ -9,14 +9,10 @@ def main():
     file (e.g. _generated.py) and then run.
     """
 
-    fname = "input/input.txt"
+    fname = "input/input2.txt"
 
     # Get arguments for Phi operator
     algorithm = produce_algorithm(fname)
-
-    body = f"""
-    {algorithm}
-    """
 
     # Note: The f allows formatting with variables. Indentation is preserved.
     tmp = f"""
@@ -41,15 +37,21 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
-    input_file = "input/input.txt"
+    input_file = "{fname}"
 
     {def_H_table}
     
     _global = []
-    {body}
+    {algorithm}
 
     for entry_id, info in h_table.table.items():
-        entry = [entry_id] + [*info.values()]
+        entry = []
+        if type(entry_id) is tuple:
+            for t in entry_id:
+                entry += [t]
+        else:
+            entry += [entry_id]
+        entry += [*info.values()]
         _global.append(entry)
 
     headers = mf_structure['select'].split(',')

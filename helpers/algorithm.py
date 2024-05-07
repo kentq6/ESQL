@@ -57,6 +57,7 @@ def produce_algorithm(input_file = None):
         # Each iteration of j aggregates one group (identified by gv)
 
         current_gv = grouping_variables[j]
+        print(current_gv)
         aggregate_funcs = find_gv_aggregates(current_gv, mf_structure['fVector'])
 
         # Get grouping attributes from predicate vector
@@ -75,7 +76,7 @@ def produce_algorithm(input_file = None):
                 aggregate_funcs = {aggregate_funcs}
                 {def_cond}:
                     for func in aggregate_funcs:
-                        h_table.update({ga},func,quant)
+                        h_table.update(({ga}),func,quant)
                 else:
                     h_table.insert(({ga}), mf_structure['fVector'])
         """

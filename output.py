@@ -20,7 +20,7 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
-    input_file = "input/input.txt"
+    input_file = "input/input2.txt"
 
     
     class H:
@@ -56,7 +56,6 @@ def query():
     
     _global = []
     
-    
     mf_structure = parse_MF_struct(input_file)
 
     # Create instance of H_Table
@@ -66,25 +65,30 @@ def query():
         for i in range(mf_structure['numGV']):
     
             if i == 0:
-                aggregate_funcs = ['1_sum_quant']
-                if (cust) in h_table.table and state=='NJ':
+                aggregate_funcs = ['1_sum_quant', '1_count_quant', '1_min_quant', '1_max_quant']
+                if (cust,prod) in h_table.table and state=='NJ':
                     for func in aggregate_funcs:
-                        h_table.update(cust,func,quant)
+                        h_table.update((cust,prod),func,quant)
                 else:
-                    h_table.insert((cust), mf_structure['fVector'])
+                    h_table.insert((cust,prod), mf_structure['fVector'])
         
             if i == 1:
                 aggregate_funcs = ['2_sum_quant']
-                if (cust) in h_table.table and state=='NY':
+                if (cust,prod) in h_table.table and state=='NY':
                     for func in aggregate_funcs:
-                        h_table.update(cust,func,quant)
+                        h_table.update((cust,prod),func,quant)
                 else:
-                    h_table.insert((cust), mf_structure['fVector'])
+                    h_table.insert((cust,prod), mf_structure['fVector'])
         
-    
 
     for entry_id, info in h_table.table.items():
-        entry = [entry_id] + [*info.values()]
+        entry = []
+        if type(entry_id) is tuple:
+            for t in entry_id:
+                entry += [t]
+        else:
+            entry += [entry_id]
+        entry += [*info.values()]
         _global.append(entry)
 
     headers = mf_structure['select'].split(',')
