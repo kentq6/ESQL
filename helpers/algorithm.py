@@ -1,79 +1,85 @@
+import re
 from helpers.mf_struct import parse_MF_struct
 
-def parse_predicates(sigmaVector):
+def get_gvs(sigma_vector):
+    gvs = []
+    for pset in sigma_vector:
+        v = pset[0].split('.')
+        gvs.append(v[0])
+    return gvs
 
-    # Set of grouping variables
-    grouping_attributes = set()
+def parse_predicates(sigma: list, default_ga: list):
 
-    # Dictionary of predicates where key:GV and value:list(tuple)
-    # Tuple structure: (attribute, value)
-    predicates = {}
+    # Set of grouping attributes
+    grouping_attributes = {}
+    # List of conditions
+    conditions = []
 
-    for pred_set in sigmaVector:
-        # pred_list = x.split(',').strip()
-        for pred in pred_set:
-            tmp = [str.strip(x) for x in pred.split("=")]
-            b = tmp[0].split(".")
+    for predicate in sigma:
+        params = re.split(r'[=\.<>]', predicate)
+        gv = params[0]
+        # print(str(params))
+        if params[1] == params[2]:
+            grouping_attributes.add(params[1])
+        else:
+            this_cond = predicate[len(gv)+1:].replace("=", "==")
+            conditions.append(this_cond)
+            # print(str(conditions))
+    if not grouping_attributes:
+        grouping_attributes = default_ga
 
-            # Identify grouping attributes
-            gv = b[0]
-            if b[1] == tmp[1]:
-                grouping_attributes.append(b[1])
-            else:
-                # Parse predicates and store in dict as  sets of tuples
-                if gv in predicates:
-                    predicates[gv].extend([(b[1],tmp[1])])
-                else:
-                    predicates[gv] = [(b[1],tmp[1])]
+    return gv, grouping_attributes, conditions
 
-            af = (b[1],tmp[1])
-            if gv in predicates:
-                predicates[gv].extend([af])
-            else:
-                predicates[gv] = [af]
-
-    return grouping_attributes, predicates
+def find_gv_aggregates(gv: str, fVector: list):
+    aggregate_funcs = []
+    for f in fVector:
+        if f[:len(gv)] == gv:
+            aggregate_funcs.append(f)
+    return aggregate_funcs
 
 def produce_algorithm(input_file = None):
 
-    # Produce mf-structure
-    mf_structure = parse_MF_struct(input_file)
-    n = mf_structure['numGV']
-
-    # Get grouping attributes from predicate vector
-    grouping_attributes, predicates = parse_predicates(mf_structure['predicates'])
-    ga = tuple(grouping_attributes)
-
     output = f"""
     mf_structure = parse_MF_struct(input_file)
-    grouping_attributes, predicates = parse_predicates(mf_structure['predicates'])
-    len_GA = len(grouping_attributes)
-    len_predicates = len(predicates)
 
-    h_table = H(len_GA, len_predicates)
+    # Create instance of H_Table
+    h_table = H(len(mf_structure['groupAttributes']), len(mf_structure['fVector']))
 
-    for (cust, prod, day, month, year, state, quant, date) in enumerate(all_sales, 1):
-        for i in range({n}):
-            curr_gv = mf_structure['groupAttributes'][i]
+    for entry, (cust, prod, day, month, year, state, quant, date) in enumerate(all_sales, 1):
+        for i in range(mf_structure['numGV']):
     """
 
-    if bool(predicates):
-        # Predicates exist
-        output += f"""
-            if ({ga}) in h_table"""
-        temp = ""
-        for n in range(len(predicates)):
-            if n < len(predicates) - 1:
-                temp += " and "
-            
+    # Produce mf-structure
+    mf_structure = parse_MF_struct(input_file)
+    grouping_variables = get_gvs(mf_structure['predicates'])
 
-    else:
+    for j in range(len(mf_structure['predicates'])):
+        # Each iteration of j aggregates one group (identified by gv)
+
+        current_gv = grouping_variables[j]
+        aggregate_funcs = find_gv_aggregates(current_gv, mf_structure['fVector'])
+
+        # Get grouping attributes from predicate vector
+        gv, grouping_attributes, conditions = parse_predicates(mf_structure['predicates'][j], mf_structure['groupAttributes'])
+        ga = ','.join(grouping_attributes)
+
+        def_cond = f"""if ({ga}) in h_table"""
+        if bool(conditions):
+            # Additional conditions exist
+            def_cond += " and "
+            str_conditions = " and ".join(conditions)
+            def_cond += str_conditions
+
         output += f"""
-            if ({ga}) in h_table:
-                h_table.update({ga},mf_structure['fVector'][{i}])
-            else:
-                htable.insert({ga})
+            if i == {j}:
+                aggregate_funcs = {aggregate_funcs}
+                {def_cond}:
+                    for func in aggregate_funcs:
+                        h_table.update({ga},func,quant)
+                else:
+                    h_table.insert({ga})
         """
+
 
     return output
 

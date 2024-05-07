@@ -41,6 +41,8 @@ def query():
     cur.execute(select_stmt)
     all_sales = cur.fetchall()
 
+    input_file = "input/input.txt"
+
     {def_H_table}
     
     _global = []
@@ -57,9 +59,9 @@ if "__main__" == __name__:
     """
 
     # Write the generated code to a file
-    open("output/output.py", "w").write(tmp)
+    open("output.py", "w").write(tmp)
     # Execute the generated code
-    subprocess.run(["python3", "output/output.py"])
+    subprocess.run(["python3", "output.py"])
 
 
 if "__main__" == __name__:

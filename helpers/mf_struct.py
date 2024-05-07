@@ -1,12 +1,18 @@
+import re
 
 def list_of_strings(args: str):
     """ Returns list of strings separated by comma """
     return list(map(str.strip, args.split(',')))
 
-def extract_set(args: str):
-    """ Returns set of strings from an argument enclosed in brackets {} """
-    args = args.replace('{', '').replace('}', '')
-    return set(args.split(','))
+def extract_sets(args: str):
+    """ Returns list of predicates, grouped by grouping variable """
+    predicates = []
+    res = re.findall(r'\{.*?\}', args)
+    for s in res:
+        set_str = s.replace('{','').replace('}','').split(',')
+        predicates.append(list(set_str))
+    # print(str(predicates))
+    return predicates
 
 def parse_MF_struct(input_file: str):
     """ 
@@ -30,8 +36,7 @@ def parse_MF_struct(input_file: str):
         mf_structure['numGV'] = int(input("NUMBER OF GROUPING VARIABLES: "))
         mf_structure['groupAttributes'] = list_of_strings(input("GROUPING ATTRIBUTES: "))
         mf_structure['fVector'] = list_of_strings(input("AGGREGATE FUNCTIONS: "))
-        predicate_input = input("PREDICATES FOR GVs: ")
-        mf_structure['predicates'] = list(map(extract_set, predicate_input.split()))
+        mf_structure['predicates'] = extract_sets(input("PREDICATES FOR GVs: "))
         mf_structure['having'] = input("HAVING: ")
 
     else: 
@@ -64,8 +69,8 @@ def parse_MF_struct(input_file: str):
             # [σ] = {σ0, ... , σn} List of predicates to define ranges for GVs
             elif field == 'PREDICATES FOR GVs':
                 # list[set{str}]
-                mf_structure['predicates'] = list(map(extract_set, args.split()))
-                print(mf_structure['predicates'])
+                mf_structure['predicates'] = extract_sets(args)
+
 
             # G = Predicate for having clause
             elif field == "HAVING":
@@ -73,6 +78,6 @@ def parse_MF_struct(input_file: str):
                 
     return mf_structure
 
-# if "__main__" == __name__:
-#     parse_MF_struct("../input/input.txt")
+if "__main__" == __name__:
+    parse_MF_struct("../input/input.txt")
     

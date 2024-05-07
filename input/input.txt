@@ -1,6 +1,6 @@
-SELECTION ATTRIBUTES: cust, 1_sum_quant, 2_sum_quant, 3_sum_quant
-NUMBER OF GROUPING VARIABLES: 3
-GROUPING ATTRIBUTES: cust, quant
-AGGREGATE FUNCTIONS: 1_sum_quant, 1_avg_quant, 2_sum_quant, 3_sum_quant, 3_avg_quant
-PREDICATES FOR GVs: {1.state=’NY’} {2.state=’NJ’} {3.state=’CT’}
-HAVING: 1_sum_quant > 2 * 2_sum_quant or 1_avg_quant > 3_avg_quant
+SELECTION ATTRIBUTES: cust, 1_sum_quant, 2_sum_quant
+NUMBER OF GROUPING VARIABLES: 2
+GROUPING ATTRIBUTES: cust
+AGGREGATE FUNCTIONS: 1_sum_quant, 2_sum_quant
+PREDICATES FOR GVs: {1.state='NJ'}{2.state='NY'}
+HAVING: 
